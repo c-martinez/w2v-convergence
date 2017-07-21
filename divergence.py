@@ -1,23 +1,12 @@
+import os
+import tempfile
 import gensim
 import numpy as np
 
 from sortedcontainers import SortedDict
 from sentenceloader import SentenceLoader
-from PCAStuff import calculateTransform, getModelInv
+from w2vtransformation import calculateTransform, getModelInv
 
-def testModelDivergence(A, Ainv, B, Binv):
-    Tab = calculateTransform(A, Ainv, B, Binv, sameVocab=False)
-    Tba = calculateTransform(B, Binv, A, Ainv, sameVocab=False)
-    TTinv = Tab * Tba
-    Si_ip = np.trace(TTinv)  / 300
-    return Si_ip
-
-def makeCopy(model):
-    fname = 'tmp.w2v'
-    model.save(fname)
-    newModel = gensim.models.Word2Vec.load(fname)
-    newModel.wv.init_sims(replace=False)
-    return newModel
 
 def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
     # Initialize model
@@ -38,14 +27,14 @@ def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
     doUpdate = False
     cumSentences = 0
     oldModel = None
-    oldInv = None
+    oldModelinv = None
 
-    print 'Building models (%d):'%y0
-    while cumSentences<maxSentences and len(batch)>0:
+    print 'Building models (%d):' % y0
+    while cumSentences < maxSentences and len(batch) > 0:
         cumSentences += len(batch)
-        cumSentencesStr = ('%d'%cumSentences).zfill(12)
+        cumSentencesStr = ('%d' % cumSentences).zfill(12)
         currYear = loader.getCurrentYear()
-        modelName = '%d (%s)'%(currYear,cumSentencesStr)
+        modelName = '%d (%s)' % (currYear, cumSentencesStr)
         print modelName + ',',
 
         model.build_vocab(batch, update=doUpdate)
@@ -65,7 +54,42 @@ def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
         # Prepare for next iteration
         doUpdate = True
         batch = loader.nextBatch()
-        oldModel = makeCopy(model)
+        oldModel = _makeCopy(model)
         oldModelinv = modelinv
 
     return divergence, sentenceYearCounter, vocabSize
+
+
+def testModelDivergence(A, Ainv, B, Binv):
+    """Given two models (A and B) and their inverse matrices, calculate the
+    divergence between the two models (as a single value)."""
+    TTinv = _calculateSymetricTransform(A, Ainv, B, Binv)
+    Si_ip = np.trace(TTinv) / A.vector_size
+    return Si_ip
+
+
+def measureDiagonal(A, Ainv, B, Binv):
+    """Given two models (A and B) and their inverse matrices, calculate the
+    divergence between the two models, per dimension (as a vector of the same
+    size as the dimensions of the models)."""
+    TTinv = _calculateSymetricTransform(A, Ainv, B, Binv)
+    return TTinv.diagonal()
+
+
+def _calculateSymetricTransform(A, Ainv, B, Binv):
+    """Given two models (A and B) calculate the symetric version of the
+    transformation matrix."""
+    Tab = calculateTransform(A, Ainv, B, Binv, sameVocab=False)
+    Tba = calculateTransform(B, Binv, A, Ainv, sameVocab=False)
+    TTinv = Tab * Tba
+    return TTinv
+
+
+def _makeCopy(model):
+    """Make a copy of the given w2v model."""
+    _, fname = tempfile.mkstemp()
+    model.save(fname)
+    newModel = gensim.models.Word2Vec.load(fname)
+    newModel.wv.init_sims(replace=False)
+    os.remove(fname)
+    return newModel
