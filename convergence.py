@@ -8,7 +8,14 @@ from sentenceloader import SentenceLoader
 from w2vtransformation import calculateTransform, getModelInv
 
 
-def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
+def computeConvergenceOverYearRange(yearRange, batchSize, maxSentences):
+    """Compute the convergence of w2v models generated over a given range of
+    years. W2v models are generated for every batch of data produced by
+    a SentenceLoader (using the given batchSize). Every model is compared
+    with the previous one and the convergence between these models is
+    calculated. This process stops once all years in the given range have been
+    processed or once the maximum number of sentences (maxSentences) has been
+    reached."""
     # Initialize model
     vocabSizeMB = 1000 * 1024 * 1024
     model = gensim.models.Word2Vec(max_vocab_size=vocabSizeMB, size=300)
@@ -19,7 +26,7 @@ def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
     y0 = yearRange[0]
 
     # Initialize returned objects
-    divergence = SortedDict()
+    convergence = SortedDict()
     sentenceYearCounter = SortedDict()
     vocabSize = SortedDict()
 
@@ -48,8 +55,8 @@ def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
         sentenceYearCounter[currYear] = cumSentences
 
         if oldModel is not None:
-            d = testModelDivergence(oldModel, oldModelinv, model, modelinv)
-            divergence[cumSentences] = d
+            d = testModelConvergence(oldModel, oldModelinv, model, modelinv)
+            convergence[cumSentences] = d
 
         # Prepare for next iteration
         doUpdate = True
@@ -57,20 +64,20 @@ def computeDivergenceOverYearRange(yearRange, batchSize, maxSentences):
         oldModel = _makeCopy(model)
         oldModelinv = modelinv
 
-    return divergence, sentenceYearCounter, vocabSize
+    return convergence, sentenceYearCounter, vocabSize
 
 
-def testModelDivergence(A, Ainv, B, Binv):
+def testModelConvergence(A, Ainv, B, Binv):
     """Given two models (A and B) and their inverse matrices, calculate the
-    divergence between the two models (as a single value)."""
+    convergence between the two models (as a single value)."""
     TTinv = _calculateSymetricTransform(A, Ainv, B, Binv)
     Si_ip = np.trace(TTinv) / A.vector_size
     return Si_ip
 
 
-def measureDiagonal(A, Ainv, B, Binv):
+def measureDiagonalConvergence(A, Ainv, B, Binv):
     """Given two models (A and B) and their inverse matrices, calculate the
-    divergence between the two models, per dimension (as a vector of the same
+    convergence between the two models, per dimension (as a vector of the same
     size as the dimensions of the models)."""
     TTinv = _calculateSymetricTransform(A, Ainv, B, Binv)
     return TTinv.diagonal()

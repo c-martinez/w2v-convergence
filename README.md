@@ -1,10 +1,10 @@
-# w2v-divergence
+# Word2Vec convergence
 Need to add a high level wordy description here...
 This is code implementing measure described in paper under review.
 
 Time-shifting models produced by this script can be used to generate models for ShiCo (link to ShiCo repo & paper).
 
-Time-shifting models generated using this method (based on Times news paper (link?)) can be found here (link).
+Time-shifting models generated using this method (based on Times newspaper (link?)) can be found here (link to data publication).
 
 ## Running these scripts
 Install Python requirements:
@@ -20,18 +20,20 @@ def getSentencesForYear(year):
 def getSentencesInRange(startY, endY):
 ```
 
-## Measure divergence for a range
-Use `runDivergenceRange.py` script.
+Implement your own `settings.py` (if required). Settings is used by `helpers.py` to determine location of data and cache directories. If you modify `getSentencesForYear` in such a way that caching is not required, then you don't need settings.
+
+## Measure convergence for a range
+Use `runConvergenceRange.py` script.
 
 Example:
 ```
-./runDivergenceRange.py --y0 1785 --nYears 5 --outDir=outDir/
+./runConvergenceRange.py --y0=1900 --nYears=10 --outDir=outDir/
 ```
 
 Perhaps more than one run is necessary.
 
-## Visualize Measured divergence
-Use `VisualizeDivergence.ipynb` (on jupyter notebook)
+## Visualize Measured convergence
+Use `VisualizeConvergence.ipynb` (on jupyter notebook)
 
 <include graph here>
 Use `outDir` from previous command as `outDir` on notebook cell.
@@ -58,3 +60,7 @@ Models        |
 1903_1908.w2v |
 1904_1909.w2v |
 1905_1910.w2v |
+
+Generated:
+
+./runGenerateModels.py --y0=1900 --yN=2009 --nYears=2 --outDir=/data3/times/models1900_2years --step=1
