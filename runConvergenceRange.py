@@ -9,7 +9,7 @@ Options:
   --nYears <years>  Number of years in the period to measure convergence
   --outDir <dir>    Directory where measured convergence results are saved
 """
-import pickle as pkl
+import cPickle as pkl
 
 from docopt import docopt
 from helpers import getYears

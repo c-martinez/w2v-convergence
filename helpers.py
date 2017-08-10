@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 import pandas as pd
-import pickle as pkl
+import cPickle as pkl
 import nltk
 from nltk.corpus import words, wordnet, stopwords
 import string
@@ -59,6 +59,7 @@ def _getDocumentsForYear(year):
 
     checkPath(cacheDir)
 
+    print 'Loading cached file: ' + cachedFile
     if os.path.exists(cachedFile):
         with gzip.open(cachedFile, 'rb') as f:
             documentsForYear = pkl.load(f)
