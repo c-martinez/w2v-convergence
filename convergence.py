@@ -13,8 +13,8 @@ from randomsentenceloader import buildChunks, RandomSentenceLoader
 from w2vtransformation import calculateTransform, getModelInv
 
 
-import logging
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
+# import logging
+# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
 
 def computeConvergenceOverYearRange(yearRange, batchSize, maxSentences):
     """Compute the convergence of w2v models generated over a given range of
@@ -75,14 +75,14 @@ def computeConvergenceOverYearRange(yearRange, batchSize, maxSentences):
     return convergence, sentenceYearCounter, vocabSize
 
 
-def testModelConvergence(A, Ainv, B, Binv):
+def testModelConvergence(A, Ainv, B, Binv, vector_size):
     """Given two models (A and B) and their inverse matrices, calculate the
     convergence between the two models (as a single value)."""
     TTinv = _calculateSymetricTransform(A, Ainv, B, Binv)
-    Si_ip = np.trace(TTinv) / 300 # A.vector_size
+    Si_ip = np.trace(TTinv) / vector_size
     return Si_ip
 
-def generateModelsForPeriod(years, minSentences, maxSentences, nSteps, chunkSize, randomSeed, modelFolder):
+def generateModelsForPeriod(years, minSentences, maxSentences, nSteps, chunkSize, randomSeed, vector_size, modelFolder):
     checkPath(modelFolder)
     for year in years:
         buildChunks(year, chunkSize)
@@ -93,7 +93,6 @@ def generateModelsForPeriod(years, minSentences, maxSentences, nSteps, chunkSize
     pkl.dump(batchSizes, open(modelFolder + '/nSentences.pkl', 'w'))
 
     for batchSize in batchSizes:
-        batch = loader.nextBatch(batchSize=batchSize)
         cumSentencesStr = ('%d'%batchSize).zfill(12)
         modelKey = '%d_'%years[0] + cumSentencesStr
 
@@ -102,17 +101,22 @@ def generateModelsForPeriod(years, minSentences, maxSentences, nSteps, chunkSize
         print 'Building model: ',modelName
 
         vocabSizeMB = 1000 * 1024 * 1024
-        model = gensim.models.Word2Vec(max_vocab_size=vocabSizeMB)
+        model = gensim.models.Word2Vec(max_vocab_size=vocabSizeMB, seed=randomSeed, size=vector_size)
+
+        loader.reset()
+        batch = loader.nextBatchGenerator(batchSize=batchSize)
         model.build_vocab(batch)
+
+        loader.reset()
+        batch = loader.nextBatchGenerator(batchSize=batchSize)
         model.train(batch)
 
         print '...saving'
         model.wv.save_word2vec_format(modelName, fvocab=vocabName, binary=True)
 
-        loader.reset()
 
 
-def computeConvergenceOverYearRangeWithBuildModels(modelFolder):
+def computeConvergenceOverYearRangeWithBuildModels(modelFolder, vector_size):
     files = sorted(glob(modelFolder + '/*[!vocab].w2v'))
 
     convergence = SortedDict()
@@ -121,13 +125,14 @@ def computeConvergenceOverYearRangeWithBuildModels(modelFolder):
 
     oldModel, oldModelInv = None, None
     for f in files:
+        print '... loading file: ', f.replace(modelFolder, '')
         newModel = gensim.models.KeyedVectors.load_word2vec_format(f, binary=True)
         newModel.init_sims(replace=False)
         newModelInv = getModelInv(newModel)
 
         cumSentences = int(f.replace(modelFolder, '').replace('.w2v', '').split('_')[1])
         if oldModel is not None:
-            d = testModelConvergence(oldModel, oldModelInv, newModel, newModelInv)
+            d = testModelConvergence(oldModel, oldModelInv, newModel, newModelInv, vector_size)
             convergence[cumSentences] = d
 
         vocabSize[cumSentences] = len(newModel.vocab)
