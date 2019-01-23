@@ -9,7 +9,7 @@ def getModelInv(model):
     # model.wv.init_sims(replace=False)
     model.init_sims(replace=False)
     # return np.linalg.pinv(model.wv.syn0norm)
-    return np.linalg.pinv(model.syn0norm)
+    return np.linalg.pinv(model.wv.syn0norm)
 
 
 def calculateTransform(A, Ainv, B, Binv, sameVocab=False):
@@ -49,18 +49,18 @@ def _wordFromVocab2Vocab(W1, A, B):
     model A, this function finds the corresponding word vector in space defined
     by B. """
     # vector in space 2
-    N = len(B.vocab)
+    N = len(B.wv.vocab)
     W2 = np.zeros(N)
 
     # for each dimension in the vocabulary B
     for j in range(N):
         # find the corresponding word in B
-        word = B.index2word[j]
+        word = B.wv.index2word[j]
 
         # if this word is vocabulary A,
-        if word in A.vocab:
+        if word in A.wv.vocab:
             # get its index in vocabulary A
-            ii = A.vocab[word].index
+            ii = A.wv.vocab[word].index
             # and add its word vector to our result with the proper weight
             W1ii = W1[ii]
             W2[j] = W1ii
@@ -71,7 +71,7 @@ def _wordFromVocab2Vocab(W1, A, B):
 
 def W2V(M, W):
     """Returns the word vector over the vocabulary a vector in the embedded space"""
-    return (M.syn0norm.T).dot(W)
+    return (M.wv.syn0norm.T).dot(W)
 
 
 def V2W(Minv, v):

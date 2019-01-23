@@ -63,7 +63,7 @@ def computeConvergenceOverYearRange(yearRange, batchSize, maxSentences):
         sentenceYearCounter[currYear] = cumSentences
 
         if oldModel is not None:
-            d = testModelConvergence(oldModel, oldModelinv, model, modelinv)
+            d = testModelConvergence(oldModel, oldModelinv, model, modelinv, model.vector_size)
             convergence[cumSentences] = d
 
         # Prepare for next iteration
